@@ -82,13 +82,16 @@ jobs:
   #      kubectl get all -A
   #      kubectl get configmaps -A
   ginkgo_test:
+    name: temp ginkgo test
+    runs-on: ubuntu-18.04
+    steps:
     - name: Set up Go 1.14
       uses: actions/setup-go@v1
       with:
         go-version: 1.14
-    #- name: Generate Code
-    #  run: |
-    #    ./ci/check-code-and-docs-gen.sh
+    - name: Generate Code
+      run: |
+        ./ci/check-code-and-docs-gen.sh
     - name: Testing - kube e2e regression tests
       run: |
-        go test ./something_fast
+        go test ./install/test

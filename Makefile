@@ -107,6 +107,7 @@ install-go-tools: mod-download
 	GOBIN=$(DEPSGOBIN) go install github.com/golang/mock/gomock
 	GOBIN=$(DEPSGOBIN) go install github.com/golang/mock/mockgen
 	GOBIN=$(DEPSGOBIN) go install github.com/gogo/protobuf/gogoproto
+	GOBIN=$(DEPSGOBIN) go install github.com/onsi/ginkgo/ginkgo #want version 1.13.0
 
 
 .PHONY: check-format

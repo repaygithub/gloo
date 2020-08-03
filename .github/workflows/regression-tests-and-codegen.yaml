@@ -74,7 +74,7 @@ jobs:
       env:
         KUBE2E_TESTS: ${{ matrix.kube-e2e-test-type }}
       run: |
-        ./_output/.bin/ginkgo -r -failFast -trace -progress -race -compilers=4 -failOnPending -noColor ./test/kube2e/...
+        ./_output/.bin/ginkgo -r -failFast -trace -progress -race -compilers=4 -failOnPending -noColor ./test/kube2e
     - name: Debug Info
       if: failure()
       run: |

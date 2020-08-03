@@ -17,8 +17,6 @@ if [[ $? -ne 0 ]]; then
   echo "Code generation failed"
   exit 1;
 fi
-echo "porcelain status: "
-git status --porcelain
 if [[ $(git status --porcelain | wc -l) -ne 0 ]]; then
   echo "Generating code produced a non-empty diff"
   echo "Try running 'make install-go-tools generated-code -B' then re-pushing."

@@ -1059,7 +1059,7 @@ var _ = Describe("Helm Test", func() {
 						testManifest.ExpectDeploymentAppsV1(gatewayProxyDeployment)
 					})
 
-					FIt("renders terminationGracePeriodSeconds when present", func() {
+					It("renders terminationGracePeriodSeconds when present", func() {
 						prepareMakefile(namespace, helmValues{
 							valuesArgs: []string{
 								"gatewayProxies.gatewayProxy.podTemplate.terminationGracePeriodSeconds=45",

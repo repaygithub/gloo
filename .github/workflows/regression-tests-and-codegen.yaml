@@ -1,88 +1,8 @@
 name: CI
 on: pull_request
 jobs:
-  #codegen:
-  #  name: codegen check
-  #  runs-on: ubuntu-18.04
-  #  steps:
-  #  - name: Cancel Previous Actions
-  #    uses: styfle/cancel-workflow-action@0.4.1
-  #    with:
-  #      access_token: ${{ github.token }}
-  #  - name: Set up Go 1.14
-  #    uses: actions/setup-go@v1
-  #    with:
-  #      go-version: 1.14
-  #    id: go
-  #  - name: Install Protoc
-  #    uses: solo-io/setup-protoc@master
-  #    with:
-  #      version: '3.6.1'
-  #  - name: Check out code into the Go module directory
-  #    uses: actions/checkout@v2
-  #    with:
-  #      fetch-depth: 0
-  #  - uses: actions/cache@v1
-  #    with:
-  #      path: ~/go/pkg/mod
-  #      key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-  #      restore-keys: |
-  #        ${{ runner.os }}-go-
-  #  - name: Generate Code
-  #    run: |
-  #      ./ci/check-code-and-docs-gen.sh
-  #regression_tests:
-  #  name: k8s regression tests
-  #  runs-on: ubuntu-18.04
-  #  strategy:
-  #    matrix:
-  #      kube-e2e-test-type: ['gateway', 'ingress', 'knative', 'helm', 'wasm']
-  #  steps:
-  #  - name: Cancel Previous Actions
-  #    uses: styfle/cancel-workflow-action@0.4.1
-  #    with:
-  #      access_token: ${{ github.token }}
-  #  - name: Set up Go 1.14
-  #    uses: actions/setup-go@v1
-  #    with:
-  #      go-version: 1.14
-  #    id: go
-  #  - name: Check out code into the Go module directory
-  #    uses: actions/checkout@v2
-  ##    with:
-  #      fetch-depth: 0
-  #  - uses: actions/cache@v1
-  #    with:
-  #      path: ~/go/pkg/mod
-  #      key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-  #      restore-keys: |
-  #        ${{ runner.os }}-go-
-  #  - uses: engineerd/setup-kind@v0.4.0
-  #    with:
-  #      name: kind
-  #  - uses: azure/setup-kubectl@v1
-  #    id: kubectl
-  #    with:
-  #      version: 'v1.18.0'
-  #  - uses: azure/setup-helm@v1
-  #    with:
-  #      version: v3.2.0
-  #  - name: Setup test env
-  #    run: |
-  #      ./ci/kind.sh
-  #  - name: Testing - kube e2e regression tests
-  #    env:
-  #      KUBE2E_TESTS: ${{ matrix.kube-e2e-test-type }}
-  #    run: |
-  #      go test ./test/kube2e/...
-  #  - name: Debug Info
-  #    if: failure()
-  #    run: |
-  #      # see what's in the cluster if we failed
-  #      kubectl get all -A
-  #      kubectl get configmaps -A
-  ginkgo_test:
-    name: temp ginkgo test
+  codegen:
+    name: codegen check
     runs-on: ubuntu-18.04
     steps:
     - name: Cancel Previous Actions
@@ -111,6 +31,53 @@ jobs:
     - name: Generate Code
       run: |
         ./ci/check-code-and-docs-gen.sh
-    - name: Testing - kube e2e regression tests
+  regression_tests:
+    name: k8s regression tests
+    runs-on: ubuntu-18.04
+    strategy:
+      matrix:
+        kube-e2e-test-type: ['gateway', 'ingress', 'knative', 'helm', 'wasm']
+    steps:
+    - name: Cancel Previous Actions
+      uses: styfle/cancel-workflow-action@0.4.1
+      with:
+        access_token: ${{ github.token }}
+    - name: Set up Go 1.14
+      uses: actions/setup-go@v1
+      with:
+        go-version: 1.14
+      id: go
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - uses: actions/cache@v1
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+    - uses: engineerd/setup-kind@v0.4.0
+      with:
+        name: kind
+    - uses: azure/setup-kubectl@v1
+      id: kubectl
+      with:
+        version: 'v1.18.0'
+    - uses: azure/setup-helm@v1
+      with:
+        version: v3.2.0
+    - name: Setup test env
       run: |
-        ./_output/.bin/ginkgo -r -failFast -trace -progress -race -compilers=4 -failOnPending -noColor ./install/test
+        ./ci/kind.sh
+    - name: Testing - kube e2e regression tests
+      env:
+        KUBE2E_TESTS: ${{ matrix.kube-e2e-test-type }}
+      run: |
+        ./_output/.bin/ginkgo -r -failFast -trace -progress -race -compilers=4 -failOnPending -noColor ./test/kube2e/...
+    - name: Debug Info
+      if: failure()
+      run: |
+        # see what's in the cluster if we failed
+        kubectl get all -A
+        kubectl get configmaps -A

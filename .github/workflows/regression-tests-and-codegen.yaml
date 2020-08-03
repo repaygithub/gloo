@@ -113,4 +113,4 @@ jobs:
         ./ci/check-code-and-docs-gen.sh
     - name: Testing - kube e2e regression tests
       run: |
-        ginkgo ./install/test
+        ./_output/.bin/ginkgo ./install/test

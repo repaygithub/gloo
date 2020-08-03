@@ -100,6 +100,7 @@ DEPSGOBIN=$(shell pwd)/_output/.bin
 install-go-tools: mod-download
 	mkdir -p $(DEPSGOBIN)
 	chmod +x $(shell go list -f '{{ .Dir }}' -m k8s.io/code-generator)/generate-groups.sh
+	GOBIN=$(DEPSGOBIN) go install github.com/onsi/ginkgo/ginkgo #want version 1.13.0
 	GOBIN=$(DEPSGOBIN) go install github.com/solo-io/protoc-gen-ext
 	GOBIN=$(DEPSGOBIN) go install golang.org/x/tools/cmd/goimports
 	GOBIN=$(DEPSGOBIN) go install github.com/gogo/protobuf/protoc-gen-gogo
@@ -107,7 +108,6 @@ install-go-tools: mod-download
 	GOBIN=$(DEPSGOBIN) go install github.com/golang/mock/gomock
 	GOBIN=$(DEPSGOBIN) go install github.com/golang/mock/mockgen
 	GOBIN=$(DEPSGOBIN) go install github.com/gogo/protobuf/gogoproto
-	GOBIN=$(DEPSGOBIN) go install github.com/onsi/ginkgo/ginkgo #want version 1.13.0
 
 
 .PHONY: check-format

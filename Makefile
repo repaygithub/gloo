@@ -111,8 +111,7 @@ install-go-tools: mod-download
 
 .PHONY: run-regression-tests
 run-regression-tests: install-go-tools
-	$(DEPSGOBIN)/ginkgo version
-	# todo add -r -failFast -trace -progress -race -compilers=4 -failOnPending -noColor ./test/kube2e/...
+	$(DEPSGOBIN)/ginkgo -r -failFast -trace -progress -race -compilers=4 -failOnPending -noColor ./test/kube2e/...
 
 .PHONY: check-format
 check-format:

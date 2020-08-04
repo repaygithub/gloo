@@ -75,9 +75,9 @@ jobs:
         KUBE2E_TESTS: ${{ matrix.kube-e2e-test-type }}
       run: |
         make run-regression-tests
-  #  - name: Debug Info
-  #    if: failure()
-  #    run: |
-  #      # see what's in the cluster if we failed
-  #      kubectl get all -A
-  #      kubectl get configmaps -A
+    - name: Debug Info
+      if: failure()
+      run: |
+        # see what's in the cluster if we failed
+        kubectl get all -A
+        kubectl get configmaps -A

@@ -27,7 +27,7 @@ ifeq ($(VERSION), $(WASM_VERSION))
 	WASM_VERSION = wasm-$(VERSION)
 endif
 
-ENVOY_GLOO_IMAGE ?= quay.io/solo-io/envoy-gloo:1.15.0-patch2
+ENVOY_GLOO_IMAGE ?= quay.io/solo-io/envoy-gloo:1.15.0-patch3
 ENVOY_GLOO_WASM_IMAGE ?= quay.io/solo-io/envoy-gloo:1.15.0-wasm-rc1
 
 # The full SHA of the currently checked out commit
@@ -144,7 +144,7 @@ clean-generated-code:
 #----------------------------------------------------------------------------------
 
 .PHONY: generated-code
-generated-code: $(OUTPUT_DIR)/.generated-code verify-enterprise-protos update-licenses generate-helm-files
+generated-code: $(OUTPUT_DIR)/.generated-code verify-enterprise-protos update-licenses generate-helm-files init
 
 # Note: currently we generate CLI docs, but don't push them to the consolidated docs repo (gloo-docs). Instead, the
 # Glooctl enterprise docs are pushed from the private repo.

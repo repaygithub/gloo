@@ -109,6 +109,11 @@ install-go-tools: mod-download
 	GOBIN=$(DEPSGOBIN) go install github.com/gogo/protobuf/gogoproto
 	GOBIN=$(DEPSGOBIN) go install github.com/onsi/ginkgo/ginkgo #want version 1.13.0
 
+.PHONY: run-regression-tests
+run-regression-tests: install-go-tools
+	$(DEPSGOBIN)/ginkgo version
+	# todo add -r -failFast -trace -progress -race -compilers=4 -failOnPending -noColor ./test/kube2e/...
+
 .PHONY: check-format
 check-format:
 	NOT_FORMATTED=$$(gofmt -l ./projects/ ./pkg/ ./test/) && if [ -n "$$NOT_FORMATTED" ]; then echo These files are not formatted: $$NOT_FORMATTED; exit 1; fi

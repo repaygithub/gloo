@@ -31,6 +31,9 @@ jobs:
     - name: Generate Code
       run: |
         ./ci/check-code-and-docs-gen.sh
+    - name: Testing - does ginkgo exist
+      run: |
+         which ginkgo
   #regression_tests:
   #  name: k8s regression tests
   #  runs-on: ubuntu-18.04

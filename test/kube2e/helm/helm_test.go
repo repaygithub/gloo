@@ -23,7 +23,7 @@ var _ = Describe("Kube2e: helm", func() {
 		rlcCrdTemplateName = filepath.Join(util.GetModuleRoot(), "install", "helm", "gloo", "crds", "ratelimit_config.yaml")
 	)
 
-	FIt("uses helm to upgrade to this gloo version without errors", func() {
+	It("uses helm to upgrade to this gloo version without errors", func() {
 
 		By("should start with gloo version 1.3.0")
 		Expect(GetGlooServerVersion(testHelper.InstallNamespace)).To(Equal("1.3.0"))

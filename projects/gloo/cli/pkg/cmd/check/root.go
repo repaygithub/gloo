@@ -55,6 +55,7 @@ func RootCmd(opts *options.Options, optionsFunc ...cliutils.OptionsFunc) *cobra.
 	}
 	pflags := cmd.PersistentFlags()
 	flagutils.AddNamespaceFlag(pflags, &opts.Metadata.Namespace)
+	flagutils.AddExcludecheckFlag(pflags, &opts.Top.CheckName)
 	cliutils.ApplyOptions(cmd, optionsFunc)
 	return cmd
 }
@@ -117,11 +118,12 @@ func CheckResources(opts *options.Options) (bool, error) {
 		return ok, err
 	}
 
-	ok, err = checkProxies(opts.Top.Ctx, namespaces, opts.Metadata.Namespace, deployments)
-	if !ok || err != nil {
-		return ok, err
+	if opts.Top.CheckName != "proxies" {
+		ok, err = checkProxies(opts.Top.Ctx, namespaces, opts.Metadata.Namespace, deployments)
+		if !ok || err != nil {
+			return ok, err
+		}
 	}
-
 	ok, err = checkGlooePromStats(opts.Top.Ctx, opts.Metadata.Namespace, deployments)
 	if !ok || err != nil {
 		return ok, err
@@ -523,7 +525,7 @@ func checkProxies(ctx context.Context, namespaces []string, glooNamespace string
 	}
 
 	return checkProxiesPromStats(ctx, glooNamespace, deployments)
-
+	//return true, nil
 }
 
 func checkSecrets(namespaces []string) (bool, error) {

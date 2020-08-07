@@ -32,6 +32,16 @@ var (
 	}
 )
 
+// contains method
+func contains(arr []string, str string) bool {
+	for _, a := range arr {
+		if a == str {
+			return false
+		}
+	}
+	return true
+}
+
 func RootCmd(opts *options.Options, optionsFunc ...cliutils.OptionsFunc) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   constants.CHECK_COMMAND.Use,
@@ -65,14 +75,20 @@ func CheckResources(opts *options.Options) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+
 	deployments, ok, err := getAndCheckDeployments(opts)
 	if !ok || err != nil {
 		return ok, err
 	}
-	ok, err = checkPods(opts)
-	if !ok || err != nil {
-		return ok, err
+
+	excludePods := contains(opts.Top.CheckName, "pods")
+	if excludePods {
+		ok, err := checkPods(opts)
+		if !ok || err != nil {
+			return ok, err
+		}
 	}
+
 	settings, err := getSettings(opts)
 	if err != nil {
 		return false, err
@@ -88,9 +104,12 @@ func CheckResources(opts *options.Options) (bool, error) {
 		return ok, err
 	}
 
-	ok, err = checkUpstreamGroups(namespaces)
-	if !ok || err != nil {
-		return ok, err
+	excludeUpstreamGroup := contains(opts.Top.CheckName, "upstreamgroup")
+	if excludeUpstreamGroup {
+		ok, err := checkUpstreamGroups(namespaces)
+		if !ok || err != nil {
+			return ok, err
+		}
 	}
 
 	knownAuthConfigs, ok, err := checkAuthConfigs(namespaces)
@@ -103,9 +122,12 @@ func CheckResources(opts *options.Options) (bool, error) {
 		return ok, err
 	}
 
-	ok, err = checkSecrets(namespaces)
-	if !ok || err != nil {
-		return ok, err
+	excludeSecrets := contains(opts.Top.CheckName, "secrets")
+	if excludeSecrets {
+		ok, err := checkSecrets(namespaces)
+		if !ok || err != nil {
+			return ok, err
+		}
 	}
 
 	ok, err = checkVirtualServices(namespaces, knownUpstreams, knownAuthConfigs, knownRateLimitConfigs)
@@ -113,17 +135,22 @@ func CheckResources(opts *options.Options) (bool, error) {
 		return ok, err
 	}
 
-	ok, err = checkGateways(namespaces)
-	if !ok || err != nil {
-		return ok, err
-	}
-
-	if opts.Top.CheckName != "proxies" {
-		ok, err = checkProxies(opts.Top.Ctx, namespaces, opts.Metadata.Namespace, deployments)
+	excludeGateway := contains(opts.Top.CheckName, "gateways")
+	if excludeGateway {
+		ok, err := checkGateways(namespaces)
 		if !ok || err != nil {
 			return ok, err
 		}
 	}
+
+	excludeProxy := contains(opts.Top.CheckName, "proxies")
+	if excludeProxy {
+		ok, err := checkProxies(opts.Top.Ctx, namespaces, opts.Metadata.Namespace, deployments)
+		if !ok || err != nil {
+			return ok, err
+		}
+	}
+
 	ok, err = checkGlooePromStats(opts.Top.Ctx, opts.Metadata.Namespace, deployments)
 	if !ok || err != nil {
 		return ok, err
@@ -525,7 +552,6 @@ func checkProxies(ctx context.Context, namespaces []string, glooNamespace string
 	}
 
 	return checkProxiesPromStats(ctx, glooNamespace, deployments)
-	//return true, nil
 }
 
 func checkSecrets(namespaces []string) (bool, error) {

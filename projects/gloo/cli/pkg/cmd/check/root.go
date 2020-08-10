@@ -33,7 +33,7 @@ var (
 )
 
 // contains method
-func contains(arr []string, str string) bool {
+func doesNotContain(arr []string, str string) bool {
 	for _, a := range arr {
 		if a == str {
 			return false
@@ -81,7 +81,7 @@ func CheckResources(opts *options.Options) (bool, error) {
 		return ok, err
 	}
 
-	excludePods := contains(opts.Top.CheckName, "pods")
+	excludePods := doesNotContain(opts.Top.CheckName, "pods")
 	if excludePods {
 		ok, err := checkPods(opts)
 		if !ok || err != nil {
@@ -104,7 +104,7 @@ func CheckResources(opts *options.Options) (bool, error) {
 		return ok, err
 	}
 
-	excludeUpstreamGroup := contains(opts.Top.CheckName, "upstreamgroup")
+	excludeUpstreamGroup := doesNotContain(opts.Top.CheckName, "upstreamgroup")
 	if excludeUpstreamGroup {
 		ok, err := checkUpstreamGroups(namespaces)
 		if !ok || err != nil {
@@ -122,7 +122,7 @@ func CheckResources(opts *options.Options) (bool, error) {
 		return ok, err
 	}
 
-	excludeSecrets := contains(opts.Top.CheckName, "secrets")
+	excludeSecrets := doesNotContain(opts.Top.CheckName, "secrets")
 	if excludeSecrets {
 		ok, err := checkSecrets(namespaces)
 		if !ok || err != nil {
@@ -135,7 +135,7 @@ func CheckResources(opts *options.Options) (bool, error) {
 		return ok, err
 	}
 
-	excludeGateway := contains(opts.Top.CheckName, "gateways")
+	excludeGateway := doesNotContain(opts.Top.CheckName, "gateways")
 	if excludeGateway {
 		ok, err := checkGateways(namespaces)
 		if !ok || err != nil {
@@ -143,7 +143,7 @@ func CheckResources(opts *options.Options) (bool, error) {
 		}
 	}
 
-	excludeProxy := contains(opts.Top.CheckName, "proxies")
+	excludeProxy := doesNotContain(opts.Top.CheckName, "proxies")
 	if excludeProxy {
 		ok, err := checkProxies(opts.Top.Ctx, namespaces, opts.Metadata.Namespace, deployments)
 		if !ok || err != nil {

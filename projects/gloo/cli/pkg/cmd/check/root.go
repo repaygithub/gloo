@@ -23,6 +23,16 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// contains method
+func doesNotContain(arr []string, str string) bool {
+	for _, a := range arr {
+		if a == str {
+			return false
+		}
+	}
+	return true
+}
+
 func RootCmd(opts *options.Options, optionsFunc ...cliutils.OptionsFunc) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   constants.CHECK_COMMAND.Use,
@@ -45,6 +55,7 @@ func RootCmd(opts *options.Options, optionsFunc ...cliutils.OptionsFunc) *cobra.
 	}
 	pflags := cmd.PersistentFlags()
 	flagutils.AddNamespaceFlag(pflags, &opts.Metadata.Namespace)
+	flagutils.AddExcludecheckFlag(pflags, &opts.Top.CheckName)
 	cliutils.ApplyOptions(cmd, optionsFunc)
 	return cmd
 }
@@ -58,10 +69,15 @@ func CheckResources(opts *options.Options) (bool, error) {
 	if !ok || err != nil {
 		return ok, err
 	}
-	ok, err = checkPods(opts)
-	if !ok || err != nil {
-		return ok, err
+
+	includePods := doesNotContain(opts.Top.CheckName, "pods")
+	if includePods {
+		ok, err := checkPods(opts)
+		if !ok || err != nil {
+			return ok, err
+		}
 	}
+
 	settings, err := getSettings(opts)
 	if err != nil {
 		return false, err
@@ -77,9 +93,12 @@ func CheckResources(opts *options.Options) (bool, error) {
 		return ok, err
 	}
 
-	ok, err = checkUpstreamGroups(namespaces)
-	if !ok || err != nil {
-		return ok, err
+	includeUpstreamGroup := doesNotContain(opts.Top.CheckName, "upstreamgroup")
+	if includeUpstreamGroup {
+		ok, err := checkUpstreamGroups(namespaces)
+		if !ok || err != nil {
+			return ok, err
+		}
 	}
 
 	knownAuthConfigs, ok, err := checkAuthConfigs(namespaces)
@@ -87,9 +106,12 @@ func CheckResources(opts *options.Options) (bool, error) {
 		return ok, err
 	}
 
-	ok, err = checkSecrets(namespaces)
-	if !ok || err != nil {
-		return ok, err
+	includeSecrets := doesNotContain(opts.Top.CheckName, "secrets")
+	if includeSecrets {
+		ok, err := checkSecrets(namespaces)
+		if !ok || err != nil {
+			return ok, err
+		}
 	}
 
 	ok, err = checkVirtualServices(namespaces, knownUpstreams, knownAuthConfigs)
@@ -97,14 +119,20 @@ func CheckResources(opts *options.Options) (bool, error) {
 		return ok, err
 	}
 
-	ok, err = checkGateways(namespaces)
-	if !ok || err != nil {
-		return ok, err
+	includeGateway := doesNotContain(opts.Top.CheckName, "gateways")
+	if includeGateway {
+		ok, err := checkGateways(namespaces)
+		if !ok || err != nil {
+			return ok, err
+		}
 	}
 
-	ok, err = checkProxies(opts.Top.Ctx, namespaces, opts.Metadata.Namespace, deployments)
-	if !ok || err != nil {
-		return ok, err
+	includeProxy := doesNotContain(opts.Top.CheckName, "proxies")
+	if includeProxy {
+		ok, err := checkProxies(opts.Top.Ctx, namespaces, opts.Metadata.Namespace, deployments)
+		if !ok || err != nil {
+			return ok, err
+		}
 	}
 
 	ok, err = checkGlooePromStats(opts.Top.Ctx, opts.Metadata.Namespace, deployments)

@@ -38,14 +38,11 @@ func RootCmd(opts *options.Options, optionsFunc ...cliutils.OptionsFunc) *cobra.
 		Use:   constants.CHECK_COMMAND.Use,
 		Short: constants.CHECK_COMMAND.Short,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ok, err := CheckResources(opts)
+			err := CheckResources(opts)
 			if err != nil {
 				// Not returning error here because this shouldn't propagate as a standard CLI error, which prints usage.
-				fmt.Printf("Error!\n")
-				fmt.Printf("%s\n", err.Error())
-				os.Exit(1)
-			} else if !ok {
-				fmt.Printf("Problems detected!\n")
+				fmt.Printf("Error!")
+				fmt.Printf("%s", err.Error())
 				os.Exit(1)
 			} else {
 				fmt.Printf("No problems detected.\n")
@@ -60,95 +57,94 @@ func RootCmd(opts *options.Options, optionsFunc ...cliutils.OptionsFunc) *cobra.
 	return cmd
 }
 
-func CheckResources(opts *options.Options) (bool, error) {
+func CheckResources(opts *options.Options) error {
 	err := checkConnection(opts.Metadata.Namespace)
 	if err != nil {
-		return false, err
+		return err
 	}
-	deployments, ok, err := getAndCheckDeployments(opts)
-	if !ok || err != nil {
-		return ok, err
+	deployments, _, err := getAndCheckDeployments(opts)
+	if err != nil {
+		return err
 	}
 
 	includePods := doesNotContain(opts.Top.CheckName, "pods")
 	if includePods {
-		ok, err := checkPods(opts)
-		if !ok || err != nil {
-			return ok, err
+		err := checkPods(opts)
+		if err != nil {
+			return err
 		}
 	}
 
 	settings, err := getSettings(opts)
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	namespaces, err := getNamespaces(settings)
 	if err != nil {
-		return false, err
+		return err
 	}
 
-	knownUpstreams, ok, err := checkUpstreams(namespaces)
-	if !ok || err != nil {
-		return ok, err
+	knownUpstreams, err := checkUpstreams(namespaces)
+	if err != nil {
+		return err
 	}
 
 	includeUpstreamGroup := doesNotContain(opts.Top.CheckName, "upstreamgroup")
 	if includeUpstreamGroup {
-		ok, err := checkUpstreamGroups(namespaces)
-		if !ok || err != nil {
-			return ok, err
+		err := checkUpstreamGroups(namespaces)
+		if err != nil {
+			return err
 		}
 	}
 
-	knownAuthConfigs, ok, err := checkAuthConfigs(namespaces)
-	if !ok || err != nil {
-		return ok, err
+	knownAuthConfigs, err := checkAuthConfigs(namespaces)
+	if err != nil {
+		return err
 	}
 
 	includeSecrets := doesNotContain(opts.Top.CheckName, "secrets")
 	if includeSecrets {
-		ok, err := checkSecrets(namespaces)
-		if !ok || err != nil {
-			return ok, err
+		err := checkSecrets(namespaces)
+		if err != nil {
+			return err
 		}
 	}
 
-	ok, err = checkVirtualServices(namespaces, knownUpstreams, knownAuthConfigs)
-	if !ok || err != nil {
-		return ok, err
+	err = checkVirtualServices(namespaces, knownUpstreams, knownAuthConfigs)
+	if err != nil {
+		return err
 	}
 
 	includeGateway := doesNotContain(opts.Top.CheckName, "gateways")
 	if includeGateway {
-		ok, err := checkGateways(namespaces)
-		if !ok || err != nil {
-			return ok, err
+		err := checkGateways(namespaces)
+		if err != nil {
+			return err
 		}
 	}
 
 	includeProxy := doesNotContain(opts.Top.CheckName, "proxies")
 	if includeProxy {
-		ok, err := checkProxies(opts.Top.Ctx, namespaces, opts.Metadata.Namespace, deployments)
-		if !ok || err != nil {
-			return ok, err
+		err := checkProxies(opts.Top.Ctx, namespaces, opts.Metadata.Namespace, deployments)
+		if err != nil {
+			return err
 		}
 	}
 
-	ok, err = checkGlooePromStats(opts.Top.Ctx, opts.Metadata.Namespace, deployments)
-	if !ok || err != nil {
-		return ok, err
+	err = checkGlooePromStats(opts.Top.Ctx, opts.Metadata.Namespace, deployments)
+	if err != nil {
+		return err
 	}
 
-	return true, nil
+	return nil
 }
 
 func getAndCheckDeployments(opts *options.Options) (*appsv1.DeploymentList, bool, error) {
-	fmt.Printf("Checking deployments... ")
 	client := helpers.MustKubeClient()
 	_, err := client.CoreV1().Namespaces().Get(opts.Metadata.Namespace, metav1.GetOptions{})
 	if err != nil {
-		fmt.Printf("Gloo namespace does not exist\n")
+		fmt.Printf("Gloo namespace does not exist")
 		return nil, false, err
 	}
 	deployments, err := client.AppsV1().Deployments(opts.Metadata.Namespace).List(metav1.ListOptions{})
@@ -156,7 +152,7 @@ func getAndCheckDeployments(opts *options.Options) (*appsv1.DeploymentList, bool
 		return nil, false, err
 	}
 	if len(deployments.Items) == 0 {
-		fmt.Printf("Gloo is not installed\n")
+		fmt.Printf("Gloo is not installed")
 		return nil, false, nil
 	}
 
@@ -175,7 +171,7 @@ func getAndCheckDeployments(opts *options.Options) (*appsv1.DeploymentList, bool
 		for _, condition := range deployment.Status.Conditions {
 			setMessage(condition)
 			if condition.Type == appsv1.DeploymentReplicaFailure && condition.Status == corev1.ConditionTrue {
-				errorToPrint = fmt.Sprintf("Deployment %s in namespace %s failed to create pods!%s\n", deployment.Name, deployment.Namespace, message)
+				errorToPrint = fmt.Sprintf("Deployment %s in namespace %s failed to create pods!%s", deployment.Name, deployment.Namespace, message)
 			}
 			if errorToPrint != "" {
 				fmt.Print(errorToPrint)
@@ -186,7 +182,7 @@ func getAndCheckDeployments(opts *options.Options) (*appsv1.DeploymentList, bool
 		for _, condition := range deployment.Status.Conditions {
 			setMessage(condition)
 			if condition.Type == appsv1.DeploymentProgressing && condition.Status != corev1.ConditionTrue {
-				errorToPrint = fmt.Sprintf("Deployment %s in namespace %s is not progressing!%s\n", deployment.Name, deployment.Namespace, message)
+				errorToPrint = fmt.Sprintf("Deployment %s in namespace %s is not progressing!%s", deployment.Name, deployment.Namespace, message)
 			}
 
 			if errorToPrint != "" {
@@ -198,7 +194,7 @@ func getAndCheckDeployments(opts *options.Options) (*appsv1.DeploymentList, bool
 		for _, condition := range deployment.Status.Conditions {
 			setMessage(condition)
 			if condition.Type == appsv1.DeploymentAvailable && condition.Status != corev1.ConditionTrue {
-				errorToPrint = fmt.Sprintf("Deployment %s in namespace %s is not available!%s\n", deployment.Name, deployment.Namespace, message)
+				errorToPrint = fmt.Sprintf("Deployment %s in namespace %s is not available!%s", deployment.Name, deployment.Namespace, message)
 			}
 
 			if errorToPrint != "" {
@@ -215,16 +211,14 @@ func getAndCheckDeployments(opts *options.Options) (*appsv1.DeploymentList, bool
 			}
 		}
 	}
-	fmt.Printf("OK\n")
 	return deployments, true, nil
 }
 
-func checkPods(opts *options.Options) (bool, error) {
-	fmt.Printf("Checking pods... ")
+func checkPods(opts *options.Options) error {
 	client := helpers.MustKubeClient()
 	pods, err := client.CoreV1().Pods(opts.Metadata.Namespace).List(metav1.ListOptions{})
 	if err != nil {
-		return false, err
+		return err
 	}
 	for _, pod := range pods.Items {
 		for _, condition := range pod.Status.Conditions {
@@ -242,23 +236,23 @@ func checkPods(opts *options.Options) (bool, error) {
 			switch condition.Type {
 			case corev1.PodScheduled:
 				if conditionNotMet {
-					errorToPrint = fmt.Sprintf("Pod %s in namespace %s is not yet scheduled!%s\n", pod.Name, pod.Namespace, message)
+					errorToPrint = fmt.Sprintf("Pod %s in namespace %s is not yet scheduled!%s", pod.Name, pod.Namespace, message)
 				}
 			case corev1.PodReady:
 				if conditionNotMet {
-					errorToPrint = fmt.Sprintf("Pod %s in namespace %s is not ready!%s\n", pod.Name, pod.Namespace, message)
+					errorToPrint = fmt.Sprintf("Pod %s in namespace %s is not ready!%s", pod.Name, pod.Namespace, message)
 				}
 			case corev1.PodInitialized:
 				if conditionNotMet {
-					errorToPrint = fmt.Sprintf("Pod %s in namespace %s is not yet initialized!%s\n", pod.Name, pod.Namespace, message)
+					errorToPrint = fmt.Sprintf("Pod %s in namespace %s is not yet initialized!%s", pod.Name, pod.Namespace, message)
 				}
 			case corev1.PodReasonUnschedulable:
 				if conditionNotMet {
-					errorToPrint = fmt.Sprintf("Pod %s in namespace %s is unschedulable!%s\n", pod.Name, pod.Namespace, message)
+					errorToPrint = fmt.Sprintf("Pod %s in namespace %s is unschedulable!%s", pod.Name, pod.Namespace, message)
 				}
 			case corev1.ContainersReady:
 				if conditionNotMet {
-					errorToPrint = fmt.Sprintf("Not all containers in pod %s in namespace %s are ready!%s\n", pod.Name, pod.Namespace, message)
+					errorToPrint = fmt.Sprintf("Not all containers in pod %s in namespace %s are ready!%s", pod.Name, pod.Namespace, message)
 				}
 			default:
 				fmt.Printf("Note: Unhandled pod condition %s", condition.Type)
@@ -266,12 +260,11 @@ func checkPods(opts *options.Options) (bool, error) {
 
 			if errorToPrint != "" {
 				fmt.Print(errorToPrint)
-				return false, err
+				return err
 			}
 		}
 	}
-	fmt.Printf("OK\n")
-	return true, nil
+	return nil
 }
 
 func getSettings(opts *options.Options) (*v1.Settings, error) {
@@ -287,99 +280,92 @@ func getNamespaces(settings *v1.Settings) ([]string, error) {
 	return helpers.GetNamespaces()
 }
 
-func checkUpstreams(namespaces []string) ([]string, bool, error) {
-	fmt.Printf("Checking upstreams... ")
+func checkUpstreams(namespaces []string) ([]string, error) {
 	var knownUpstreams []string
 	for _, ns := range namespaces {
 		upstreams, err := helpers.MustNamespacedUpstreamClient(ns).List(ns, clients.ListOpts{})
 		if err != nil {
-			return nil, false, err
+			return nil, err
 		}
 		for _, upstream := range upstreams {
 			if upstream.Status.GetState() == core.Status_Rejected {
-				fmt.Printf("Found rejected upstream: %s\n", renderMetadata(upstream.GetMetadata()))
-				fmt.Printf("Reason: %s\n", upstream.Status.Reason)
-				return nil, false, nil
+				fmt.Printf("Found rejected upstream: %s", renderMetadata(upstream.GetMetadata()))
+				fmt.Printf("Reason: %s", upstream.Status.Reason)
+				return nil, nil
 			}
 			if upstream.Status.GetState() == core.Status_Warning {
-				fmt.Printf("Found upstream with warnings: %s\n", renderMetadata(upstream.GetMetadata()))
-				fmt.Printf("Reason: %s\n", upstream.Status.Reason)
-				return nil, false, nil
+				fmt.Printf("Found upstream with warnings: %s", renderMetadata(upstream.GetMetadata()))
+				fmt.Printf("Reason: %s", upstream.Status.Reason)
+				return nil, nil
 			}
 			knownUpstreams = append(knownUpstreams, renderMetadata(upstream.GetMetadata()))
 		}
 	}
-	fmt.Printf("OK\n")
-	return knownUpstreams, true, nil
+	return knownUpstreams, nil
 }
 
-func checkUpstreamGroups(namespaces []string) (bool, error) {
-	fmt.Printf("Checking upstream groups... ")
+func checkUpstreamGroups(namespaces []string) error {
 	for _, ns := range namespaces {
 		upstreamGroups, err := helpers.MustNamespacedUpstreamGroupClient(ns).List(ns, clients.ListOpts{})
 		if err != nil {
-			return false, err
+			return err
 		}
 		for _, upstreamGroup := range upstreamGroups {
 			if upstreamGroup.Status.GetState() == core.Status_Rejected {
-				fmt.Printf("Found rejected upstream group: %s\n", renderMetadata(upstreamGroup.GetMetadata()))
-				fmt.Printf("Reason: %s\n", upstreamGroup.Status.Reason)
-				return false, nil
+				fmt.Printf("Found rejected upstream group: %s", renderMetadata(upstreamGroup.GetMetadata()))
+				fmt.Printf("Reason: %s", upstreamGroup.Status.Reason)
+				return nil
 			}
 			if upstreamGroup.Status.GetState() == core.Status_Warning {
-				fmt.Printf("Found upstream group with warnings: %s\n", renderMetadata(upstreamGroup.GetMetadata()))
-				fmt.Printf("Reason: %s\n", upstreamGroup.Status.Reason)
-				return false, nil
+				fmt.Printf("Found upstream group with warnings: %s", renderMetadata(upstreamGroup.GetMetadata()))
+				fmt.Printf("Reason: %s", upstreamGroup.Status.Reason)
+				return nil
 			}
 		}
 	}
-	fmt.Printf("OK\n")
-	return true, nil
+	return nil
 }
 
-func checkAuthConfigs(namespaces []string) ([]string, bool, error) {
-	fmt.Printf("Checking auth configs... ")
+func checkAuthConfigs(namespaces []string) ([]string, error) {
 	var knownAuthConfigs []string
 	for _, ns := range namespaces {
 		authConfigs, err := helpers.MustNamespacedAuthConfigClient(ns).List(ns, clients.ListOpts{})
 		if err != nil {
-			return nil, false, err
+			return nil, err
 		}
 		for _, authConfig := range authConfigs {
 			if authConfig.Status.GetState() == core.Status_Rejected {
-				fmt.Printf("Found rejected auth config: %s\n", renderMetadata(authConfig.GetMetadata()))
-				fmt.Printf("Reason: %s\n", authConfig.Status.Reason)
-				return nil, false, nil
+				fmt.Printf("Found rejected auth config: %s", renderMetadata(authConfig.GetMetadata()))
+				fmt.Printf("Reason: %s", authConfig.Status.Reason)
+				return nil, nil
 			}
 			if authConfig.Status.GetState() == core.Status_Warning {
-				fmt.Printf("Found auth config with warnings: %s\n", renderMetadata(authConfig.GetMetadata()))
-				fmt.Printf("Reason: %s\n", authConfig.Status.Reason)
-				return nil, false, nil
+				fmt.Printf("Found auth config with warnings: %s", renderMetadata(authConfig.GetMetadata()))
+				fmt.Printf("Reason: %s", authConfig.Status.Reason)
+				return nil, nil
 			}
 			knownAuthConfigs = append(knownAuthConfigs, renderMetadata(authConfig.GetMetadata()))
 		}
 	}
-	fmt.Printf("OK\n")
-	return knownAuthConfigs, true, nil
+	return knownAuthConfigs, nil
 }
 
-func checkVirtualServices(namespaces, knownUpstreams []string, knownAuthConfigs []string) (bool, error) {
-	fmt.Printf("Checking virtual services... ")
+func checkVirtualServices(namespaces, knownUpstreams []string, knownAuthConfigs []string) error {
 	for _, ns := range namespaces {
 		virtualServices, err := helpers.MustNamespacedVirtualServiceClient(ns).List(ns, clients.ListOpts{})
 		if err != nil {
-			return false, err
+			return err
 		}
 		for _, virtualService := range virtualServices {
 			if virtualService.Status.GetState() == core.Status_Rejected {
-				fmt.Printf("Found rejected virtual service: %s\n", renderMetadata(virtualService.GetMetadata()))
-				fmt.Printf("Reason: %s\n", virtualService.Status.GetReason())
-				return false, nil
+				fmt.Printf("Found rejected virtual service: %s", renderMetadata(virtualService.GetMetadata()))
+				fmt.Printf("Reason: %s", virtualService.Status.GetReason())
+				return nil
 			}
 			if virtualService.Status.GetState() == core.Status_Warning {
-				fmt.Printf("Found virtual service with warnings: %s\n", renderMetadata(virtualService.GetMetadata()))
-				fmt.Printf("Reason: %s\n", virtualService.Status.GetReason())
-				return false, nil
+				fmt.Printf("Found virtual service with warnings: %s", renderMetadata(virtualService.GetMetadata()))
+				fmt.Printf("Reason: %s", virtualService.Status.GetReason())
+				return nil
 			}
 			for _, route := range virtualService.GetVirtualHost().GetRoutes() {
 				if route.GetRouteAction() != nil {
@@ -387,10 +373,10 @@ func checkVirtualServices(namespaces, knownUpstreams []string, knownAuthConfigs 
 						us := route.GetRouteAction().GetSingle()
 						if us.GetUpstream() != nil {
 							if !cliutils.Contains(knownUpstreams, renderRef(us.GetUpstream())) {
-								fmt.Printf("Virtual service references unknown upstream:\n")
-								fmt.Printf("  Virtual service: %s\n", renderMetadata(virtualService.GetMetadata()))
-								fmt.Printf("  Upstream: %s\n", renderRef(us.GetUpstream()))
-								return false, nil
+								fmt.Printf("Virtual service references unknown upstream:")
+								fmt.Printf("  Virtual service: %s", renderMetadata(virtualService.GetMetadata()))
+								fmt.Printf("  Upstream: %s", renderRef(us.GetUpstream()))
+								return nil
 							}
 						}
 					}
@@ -398,58 +384,54 @@ func checkVirtualServices(namespaces, knownUpstreams []string, knownAuthConfigs 
 			}
 			acRef := virtualService.GetVirtualHost().GetOptions().GetExtauth().GetConfigRef()
 			if acRef != nil && !cliutils.Contains(knownAuthConfigs, renderRef(acRef)) {
-				fmt.Printf("Virtual service references unknown auth config:\n")
-				fmt.Printf("  Virtual service: %s\n", renderMetadata(virtualService.GetMetadata()))
-				fmt.Printf("  Auth Config: %s\n", renderRef(acRef))
-				return false, nil
+				fmt.Printf("Virtual service references unknown auth config:")
+				fmt.Printf("  Virtual service: %s", renderMetadata(virtualService.GetMetadata()))
+				fmt.Printf("  Auth Config: %s", renderRef(acRef))
+				return nil
 			}
 		}
 	}
-	fmt.Printf("OK\n")
-	return true, nil
+	return nil
 }
 
-func checkGateways(namespaces []string) (bool, error) {
-	fmt.Printf("Checking gateways... ")
+func checkGateways(namespaces []string) error {
 	for _, ns := range namespaces {
 		gateways, err := helpers.MustNamespacedGatewayClient(ns).List(ns, clients.ListOpts{})
 		if err != nil {
-			return false, err
+			return err
 		}
 		for _, gateway := range gateways {
 			if gateway.Status.GetState() == core.Status_Rejected {
-				fmt.Printf("Found rejected gateway: %s\n", renderMetadata(gateway.GetMetadata()))
-				fmt.Printf("Reason: %s\n", gateway.Status.Reason)
-				return false, nil
+				fmt.Printf("Found rejected gateway: %s", renderMetadata(gateway.GetMetadata()))
+				fmt.Printf("Reason: %s", gateway.Status.Reason)
+				return nil
 			}
 			if gateway.Status.GetState() == core.Status_Warning {
-				fmt.Printf("Found gateway with warnings: %s\n", renderMetadata(gateway.GetMetadata()))
-				fmt.Printf("Reason: %s\n", gateway.Status.Reason)
-				return false, nil
+				fmt.Printf("Found gateway with warnings: %s", renderMetadata(gateway.GetMetadata()))
+				fmt.Printf("Reason: %s", gateway.Status.Reason)
+				return nil
 			}
 		}
 	}
-	fmt.Printf("OK\n")
-	return true, nil
+	return nil
 }
 
-func checkProxies(ctx context.Context, namespaces []string, glooNamespace string, deployments *appsv1.DeploymentList) (bool, error) {
-	fmt.Printf("Checking proxies... ")
+func checkProxies(ctx context.Context, namespaces []string, glooNamespace string, deployments *appsv1.DeploymentList) error {
 	for _, ns := range namespaces {
 		proxies, err := helpers.MustNamespacedProxyClient(ns).List(ns, clients.ListOpts{})
 		if err != nil {
-			return false, err
+			return err
 		}
 		for _, proxy := range proxies {
 			if proxy.Status.GetState() == core.Status_Rejected {
-				fmt.Printf("Found rejected proxy: %s\n", renderMetadata(proxy.GetMetadata()))
-				fmt.Printf("Reason: %s\n", proxy.Status.Reason)
-				return false, nil
+				fmt.Printf("Found rejected proxy: %s", renderMetadata(proxy.GetMetadata()))
+				fmt.Printf("Reason: %s", proxy.Status.Reason)
+				return nil
 			}
 			if proxy.Status.GetState() == core.Status_Warning {
-				fmt.Printf("Found proxy with warnings: %s\n", renderMetadata(proxy.GetMetadata()))
-				fmt.Printf("Reason: %s\n", proxy.Status.Reason)
-				return false, nil
+				fmt.Printf("Found proxy with warnings: %s", renderMetadata(proxy.GetMetadata()))
+				fmt.Printf("Reason: %s", proxy.Status.Reason)
+				return nil
 			}
 		}
 	}
@@ -458,19 +440,17 @@ func checkProxies(ctx context.Context, namespaces []string, glooNamespace string
 
 }
 
-func checkSecrets(namespaces []string) (bool, error) {
-	fmt.Printf("Checking secrets... ")
+func checkSecrets(namespaces []string) error {
 	client := helpers.MustSecretClientWithOptions(5*time.Second, namespaces)
 
 	for _, ns := range namespaces {
 		_, err := client.List(ns, clients.ListOpts{})
 		if err != nil {
-			return false, err
+			return err
 		}
 		// currently this would only find syntax errors
 	}
-	fmt.Printf("OK\n")
-	return true, nil
+	return nil
 }
 
 func renderMetadata(metadata core.Metadata) string {

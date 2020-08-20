@@ -97,7 +97,6 @@ func checkGlooePromStats(ctx context.Context, glooNamespace string, deployments 
 
 	for _, deployment := range deployments.Items {
 		if deployment.Name == rateLimitDeployment {
-			fmt.Printf("Checking rate limit server... ")
 			if !RateLimitIsConnected(stats) {
 				return nil
 			}

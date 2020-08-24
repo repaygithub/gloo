@@ -45,7 +45,7 @@ func RootCmd(opts *options.Options, optionsFunc ...cliutils.OptionsFunc) *cobra.
 				fmt.Printf("%s", err.Error())
 				os.Exit(1)
 			} else {
-				fmt.Printf("No problems detected.\n")
+				fmt.Printf(" No problems detected.\n")
 			}
 			return nil
 		},

@@ -1,6 +1,6 @@
 package wasm
 
-//go:generate mockgen -destination mocks/mock_cache.go  github.com/solo-io/wasme/pkg/cache Cache
+//go:generate mockgen -destination mocks/mock_cache.go  github.com/solo-io/wasm/tools/wasme/pkg/cache Cache
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 	"github.com/solo-io/gloo/projects/gloo/pkg/api/v1/options/wasm"
 	"github.com/solo-io/gloo/projects/gloo/pkg/plugins"
 	"github.com/solo-io/go-utils/contextutils"
-	"github.com/solo-io/wasme/pkg/defaults"
+	"github.com/solo-io/wasm/tools/wasme/pkg/defaults"
 
 	configcore "github.com/solo-io/gloo/projects/gloo/pkg/api/external/envoy/config/core/v3"
 	wasmv3 "github.com/solo-io/gloo/projects/gloo/pkg/api/external/envoy/extensions/filters/http/wasm/v3"
@@ -91,8 +91,9 @@ func (p *Plugin) ensureFilter(wasmFilter *wasm.WasmFilter) (*plugins.StagedHttpF
 			Configuration: wasmFilter.Config,
 			Vm: &wasmv3ext.PluginConfig_VmConfig{
 				VmConfig: &wasmv3ext.VmConfig{
-					VmId:    VmId,
-					Runtime: runtime,
+					VmId:                VmId,
+					Runtime:             runtime,
+					NackOnCodeCacheMiss: true,
 					Code: &configcore.AsyncDataSource{
 						Specifier: &configcore.AsyncDataSource_Remote{
 							Remote: &configcore.RemoteDataSource{

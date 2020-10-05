@@ -8,12 +8,14 @@ import (
 	"strings"
 	"time"
 
-	"knative.dev/serving/pkg/apis/networking"
+	envoycore_sk "github.com/solo-io/solo-kit/pkg/api/external/envoy/api/v2/core"
 
 	"knative.dev/pkg/network"
+	"knative.dev/serving/pkg/apis/networking"
 
 	"github.com/solo-io/gloo/projects/gloo/pkg/api/v1/core/matchers"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 
 	v1alpha1 "github.com/solo-io/gloo/projects/knative/pkg/api/external/knative"
 	"github.com/solo-io/go-utils/contextutils"
@@ -300,9 +302,9 @@ func getHeaderManipulation(headersToAppend map[string]string) *headers.HeaderMan
 	if len(headersToAppend) == 0 {
 		return nil
 	}
-	var headersToAdd []*headers.HeaderValueOption
+	var headersToAdd []*envoycore_sk.HeaderValueOption
 	for name, value := range headersToAppend {
-		headersToAdd = append(headersToAdd, &headers.HeaderValueOption{Header: &headers.HeaderValue{Key: name, Value: value}})
+		headersToAdd = append(headersToAdd, &envoycore_sk.HeaderValueOption{HeaderOption: &envoycore_sk.HeaderValueOption_Header{Header: &envoycore_sk.HeaderValue{Key: name, Value: value}}})
 	}
 	return &headers.HeaderManipulation{
 		RequestHeadersToAdd: headersToAdd,
@@ -313,7 +315,7 @@ func getHeaderManipulation(headersToAppend map[string]string) *headers.HeaderMan
 // undocumented requirement
 // see https://github.com/knative/serving/blob/master/pkg/reconciler/ingress/resources/virtual_service.go#L281
 func expandHosts(hosts []string) []string {
-	var expanded []string
+	expanded := sets.NewString()
 	allowedSuffixes := []string{
 		"",
 		"." + network.GetClusterDomainName(),
@@ -322,10 +324,10 @@ func expandHosts(hosts []string) []string {
 	for _, h := range hosts {
 		for _, suffix := range allowedSuffixes {
 			if strings.HasSuffix(h, suffix) {
-				expanded = append(expanded, strings.TrimSuffix(h, suffix))
+				expanded.Insert(strings.TrimSuffix(h, suffix))
 			}
 		}
 	}
 
-	return expanded
+	return expanded.List()
 }

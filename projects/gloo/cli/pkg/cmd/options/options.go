@@ -27,6 +27,7 @@ type Options struct {
 	Route     Route
 	Get       Get
 	Add       Add
+	Istio     Istio
 	Remove    Remove
 	Cluster   Cluster
 }
@@ -153,6 +154,11 @@ type RouteMatchers struct {
 type Add struct {
 	Route  InputRoute
 	DryRun bool // print resource as a kubernetes style yaml and exit without writing to storage
+}
+
+type Istio struct {
+	Upstream  string // upstream for which we are changing the istio mTLS settings
+	Namespace string // namespace in which istio is installed
 }
 
 type InputRoute struct {
@@ -416,7 +422,7 @@ type OpaAuth struct {
 type Cluster struct {
 	FederationNamespace string
 	Register            Register
-	Unregister          Unregister
+	Deregister          Register
 }
 
 type Register struct {
@@ -425,8 +431,4 @@ type Register struct {
 	ClusterName                string
 	LocalClusterDomainOverride string
 	RemoteNamespace            string
-}
-
-type Unregister struct {
-	ClusterName string
 }

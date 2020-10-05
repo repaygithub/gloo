@@ -16,6 +16,8 @@ weight: 5
 - [Route](#route)
 - [DelegateAction](#delegateaction)
 - [RouteTableSelector](#routetableselector)
+- [Expression](#expression)
+- [Operator](#operator)
   
 
 
@@ -186,6 +188,7 @@ top-level `RouteTable` resources.
 
 ```yaml
 "matchers": []matchers.core.gloo.solo.io.Matcher
+"inheritableMatchers": .google.protobuf.BoolValue
 "routeAction": .gloo.solo.io.RouteAction
 "redirectAction": .gloo.solo.io.RedirectAction
 "directResponseAction": .gloo.solo.io.DirectResponseAction
@@ -198,6 +201,7 @@ top-level `RouteTable` resources.
 | Field | Type | Description | Default |
 | ----- | ---- | ----------- |----------- | 
 | `matchers` | [[]matchers.core.gloo.solo.io.Matcher](../../../../gloo/api/v1/core/matchers/matchers.proto.sk/#matcher) | Matchers contain parameters for matching requests (i.e., based on HTTP path, headers, etc.) If empty, the route will match all requests (i.e, a single "/" path prefix matcher) For delegated routes, the matcher must contain only a `prefix` path matcher and no other config. |  |
+| `inheritableMatchers` | [.google.protobuf.BoolValue](https://developers.google.com/protocol-buffers/docs/reference/csharp/class/google/protobuf/well-known-types/bool-value) | Whether any child route objects should inherit headers, methods, and query parameter matchers from the parent. Defaults to value of parent; for virtual services (no parent) defaults to false. |  |
 | `routeAction` | [.gloo.solo.io.RouteAction](../../../../gloo/api/v1/proxy.proto.sk/#routeaction) | This action is the primary action to be selected for most routes. The RouteAction tells the proxy to route requests to an upstream. Only one of `routeAction`, `redirectAction`, or `delegateAction` can be set. |  |
 | `redirectAction` | [.gloo.solo.io.RedirectAction](../../../../gloo/api/v1/proxy.proto.sk/#redirectaction) | Redirect actions tell the proxy to return a redirect response to the downstream client. Only one of `redirectAction`, `routeAction`, or `delegateAction` can be set. |  |
 | `directResponseAction` | [.gloo.solo.io.DirectResponseAction](../../../../gloo/api/v1/proxy.proto.sk/#directresponseaction) | Return an arbitrary HTTP response directly, without proxying. Only one of `directResponseAction`, `routeAction`, or `delegateAction` can be set. |  |
@@ -241,6 +245,7 @@ Select route tables for delegation by namespace, labels, or both.
 ```yaml
 "namespaces": []string
 "labels": map<string, string>
+"expressions": []gateway.solo.io.RouteTableSelector.Expression
 
 ```
 
@@ -248,6 +253,49 @@ Select route tables for delegation by namespace, labels, or both.
 | ----- | ---- | ----------- |----------- | 
 | `namespaces` | `[]string` | Delegate to Route Tables in these namespaces. If omitted, Gloo will only select Route Tables in the same namespace as the resource (Virtual Service or Route Table) that owns this selector. The reserved value "*" can be used to select Route Tables in all namespaces watched by Gloo. |  |
 | `labels` | `map<string, string>` | Delegate to Route Tables whose labels match the ones specified here. |  |
+| `expressions` | [[]gateway.solo.io.RouteTableSelector.Expression](../virtual_service.proto.sk/#expression) | Expressions allow for more flexible Route Tables label matching, such as equality-based requirements, set-based requirements, or a combination of both. https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#equality-based-requirement. |  |
+
+
+
+
+---
+### Expression
+
+
+
+```yaml
+"key": string
+"operator": .gateway.solo.io.RouteTableSelector.Expression.Operator
+"values": []string
+
+```
+
+| Field | Type | Description | Default |
+| ----- | ---- | ----------- |----------- | 
+| `key` | `string` | Kubernetes label key, must conform to Kubernetes syntax requirements https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#syntax-and-character-set. |  |
+| `operator` | [.gateway.solo.io.RouteTableSelector.Expression.Operator](../virtual_service.proto.sk/#operator) | The operator can only be in, notin, =, ==, !=, exists, ! (DoesNotExist), gt (GreaterThan), lt (LessThan). |  |
+| `values` | `[]string` |  |  |
+
+
+
+
+---
+### Operator
+
+ 
+Route Table Selector expression operator, while the set-based syntax differs from Kubernetes (kubernetes: `key: !mylabel`, gloo: `key: mylabel, operator: "!"` | kubernetes: `key: mylabel`, gloo: `key: mylabel, operator: exists`), the functionality remains the same.
+
+| Name | Description |
+| ----- | ----------- | 
+| `Equals` | = |
+| `DoubleEquals` | == |
+| `NotEquals` | != |
+| `In` | in |
+| `NotIn` | notin |
+| `Exists` | exists |
+| `DoesNotExist` | ! |
+| `GreaterThan` | gt |
+| `LessThan` | lt |
 
 
 

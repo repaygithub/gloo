@@ -7,6 +7,7 @@ option (gogoproto.equal_all) = true;
 import "extproto/ext.proto";
 option (extproto.hash_all) = true;
 
+import "google/protobuf/wrappers.proto";
 import "solo-kit/api/v1/metadata.proto";
 import "solo-kit/api/v1/status.proto";
 import "solo-kit/api/v1/ref.proto";
@@ -187,6 +188,10 @@ message Route {
     // For delegated routes, the matcher must contain only a `prefix` path matcher and no other config
     repeated matchers.core.gloo.solo.io.Matcher matchers = 1;
 
+    // Whether any child route objects should inherit headers, methods, and query parameter matchers from the parent.
+    // Defaults to value of parent; for virtual services (no parent) defaults to false.
+    google.protobuf.BoolValue inheritable_matchers = 8;
+
     // The Route Action Defines what action the proxy should take when a request matches the route.
     oneof action {
         // This action is the primary action to be selected for most routes. The RouteAction tells the proxy to
@@ -245,4 +250,38 @@ message RouteTableSelector {
     // Delegate to Route Tables whose labels match the ones specified here.
     map<string, string> labels = 2;
 
+    message Expression {
+      // Kubernetes label key, must conform to Kubernetes syntax requirements
+      // https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#syntax-and-character-set
+      string key = 1;
+
+      // Route Table Selector expression operator, while the set-based syntax differs from Kubernetes (kubernetes: `key: !mylabel`, gloo: `key: mylabel, operator: "!"` | kubernetes: `key: mylabel`, gloo: `key: mylabel, operator: exists`), the functionality remains the same.
+      enum Operator {
+        // =
+        Equals = 0;
+        // ==
+        DoubleEquals = 1;
+        // !=
+        NotEquals = 2;
+        // in
+        In = 3;
+        // notin
+        NotIn = 4;
+        // exists
+        Exists = 5;
+        // !
+        DoesNotExist = 6;
+        // gt
+        GreaterThan = 7;
+        // lt
+        LessThan = 8;
+      }
+      // The operator can only be in, notin, =, ==, !=, exists, ! (DoesNotExist), gt (GreaterThan), lt (LessThan).
+      Operator operator = 2;
+      repeated string values = 3;
+    }
+
+    // Expressions allow for more flexible Route Tables label matching, such as equality-based requirements, set-based requirements, or a combination of both.
+    // https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#equality-based-requirement
+    repeated Expression expressions = 3;
 }

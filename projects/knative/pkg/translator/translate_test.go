@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	envoycore_sk "github.com/solo-io/solo-kit/pkg/api/external/envoy/api/v2/core"
+
 	"github.com/solo-io/gloo/projects/gloo/pkg/api/v1/core/matchers"
 	"github.com/solo-io/gloo/projects/gloo/pkg/api/v1/options/headers"
 
@@ -162,18 +164,18 @@ var _ = Describe("Translate", func() {
 								{
 									Name: "example.ing-0",
 									Domains: []string{
-										"petes.com",
-										"petes.com:80",
-										"zah.net",
-										"zah.net:80",
-										"mysvc.myns.svc.cluster.local",
-										"mysvc.myns.svc.cluster.local:80",
-										"mysvc.myns.svc",
-										"mysvc.myns.svc:80",
 										"mysvc.myns",
 										"mysvc.myns:80",
 										"mysvc.myns.example.com",
 										"mysvc.myns.example.com:80",
+										"mysvc.myns.svc",
+										"mysvc.myns.svc:80",
+										"mysvc.myns.svc.cluster.local",
+										"mysvc.myns.svc.cluster.local:80",
+										"petes.com",
+										"petes.com:80",
+										"zah.net",
+										"zah.net:80",
 									},
 									Routes: []*gloov1.Route{
 										{
@@ -213,14 +215,7 @@ var _ = Describe("Translate", func() {
 													PerTryTimeout: durptr(1000),
 												},
 												HeaderManipulation: &headers.HeaderManipulation{
-													RequestHeadersToAdd: []*headers.HeaderValueOption{
-														{
-															Header: &headers.HeaderValue{
-																Key:   "add",
-																Value: "me",
-															},
-														},
-													},
+													RequestHeadersToAdd: []*envoycore_sk.HeaderValueOption{{HeaderOption: &envoycore_sk.HeaderValueOption_Header{Header: &envoycore_sk.HeaderValue{Key: "add", Value: "me"}}}},
 												},
 											},
 										},
@@ -229,10 +224,10 @@ var _ = Describe("Translate", func() {
 								{
 									Name: "example.ing-1",
 									Domains: []string{
-										"pog.com",
-										"pog.com:80",
 										"champ.net",
 										"champ.net:80",
+										"pog.com",
+										"pog.com:80",
 										"zah.net",
 										"zah.net:80",
 									},
@@ -274,14 +269,7 @@ var _ = Describe("Translate", func() {
 													PerTryTimeout: durptr(1000),
 												},
 												HeaderManipulation: &headers.HeaderManipulation{
-													RequestHeadersToAdd: []*headers.HeaderValueOption{
-														{
-															Header: &headers.HeaderValue{
-																Key:   "add",
-																Value: "me",
-															},
-														},
-													},
+													RequestHeadersToAdd: []*envoycore_sk.HeaderValueOption{{HeaderOption: &envoycore_sk.HeaderValueOption_Header{Header: &envoycore_sk.HeaderValue{Key: "add", Value: "me"}}}},
 												},
 											},
 										},
@@ -344,14 +332,7 @@ var _ = Describe("Translate", func() {
 													PerTryTimeout: durptr(1000),
 												},
 												HeaderManipulation: &headers.HeaderManipulation{
-													RequestHeadersToAdd: []*headers.HeaderValueOption{
-														{
-															Header: &headers.HeaderValue{
-																Key:   "add",
-																Value: "me",
-															},
-														},
-													},
+													RequestHeadersToAdd: []*envoycore_sk.HeaderValueOption{{HeaderOption: &envoycore_sk.HeaderValueOption_Header{Header: &envoycore_sk.HeaderValue{Key: "add", Value: "me"}}}},
 												},
 											},
 										},

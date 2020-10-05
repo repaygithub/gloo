@@ -3,12 +3,12 @@
 set -eu
 
 if ! [ -x "$(command -v python)" ]; then
-     echo Python is required to install glooctl
-     exit 1
- fi
+  echo Python is required to install glooctl
+  exit 1
+fi
 
 if [ -z "${GLOO_VERSION:-}" ]; then
-  GLOO_VERSIONS=$(curl -sH"Accept: application/vnd.github.v3+json" https://api.github.com/repos/solo-io/gloo/releases | python -c "import sys; from distutils.version import LooseVersion; from json import loads as l; releases = l(sys.stdin.read()); releases = [release['tag_name'] for release in releases];  releases.sort(key=LooseVersion, reverse=True); print('\n'.join(releases))")
+  GLOO_VERSIONS=$(curl -sH"Accept: application/vnd.github.v3+json" https://api.github.com/repos/solo-io/gloo/releases | python -c "import sys; from distutils.version import StrictVersion, LooseVersion; from json import loads as l; releases = l(sys.stdin.read()); releases = [release['tag_name'] for release in releases];  filtered_releases = list(filter(lambda release_string: len(release_string) > 0 and StrictVersion.version_re.match(release_string[1:]) != None, releases)); filtered_releases.sort(key=LooseVersion, reverse=True); print('\n'.join(filtered_releases))")
 else
   GLOO_VERSIONS="${GLOO_VERSION}"
 fi
@@ -19,10 +19,13 @@ else
   OS=linux
 fi
 
+# TODO (celsosantos): Add ARM64 binaries support
+GOARCH=amd64
+
 for gloo_version in $GLOO_VERSIONS; do
 
 tmp=$(mktemp -d /tmp/gloo.XXXXXX)
-filename="glooctl-${OS}-amd64"
+filename="glooctl-${OS}-${GOARCH}"
 url="https://github.com/solo-io/gloo/releases/download/${gloo_version}/${filename}"
 
 if curl -f ${url} >/dev/null 2>&1; then
